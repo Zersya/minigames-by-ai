@@ -20,6 +20,13 @@
     }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/$1" }
+    {
+      "source": "/infinite-runner/(.*)",
+      "destination": "/infinite-runner/$1"
+    },
+    {
+      "source": "/city-view/(.*)",
+      "destination": "/city-view/$1"
+    }
   ]
 }
