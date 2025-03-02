@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Infinite Runner</title>
+    <link rel="stylesheet" href="../styles/loading.css">
     <style>
         body { margin: 0; overflow: hidden; }
         #score-display {
@@ -49,45 +50,53 @@
             border-radius: 50%;
             display: inline-block;
         }
-        .power-up-notification {
+        #power-up-notification {
             position: fixed;
             left: 50%;
-            top: 100px;
+            bottom: 100px;
             transform: translateX(-50%);
             background: rgba(0, 0, 0, 0.7);
             color: white;
             padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 20px;
             font-family: Arial, sans-serif;
-            z-index: 100;
             opacity: 0;
             transition: opacity 0.3s;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading Infinite Runner...</div>
+        <div class="loading-progress">
+            <div id="loading-progress-bar" class="loading-progress-bar"></div>
+        </div>
+    </div>
+
     <div id="score-display">Score: 0</div>
     <div id="time-controls">
-        <label for="time-slider">Time of Day:</label>
-        <input type="range" id="time-slider" min="0" max="24" value="12" step="0.1">
-        <span id="time-display">12:00</span>
+        Time: <span id="time-display">00:00</span>
     </div>
+    
     <div id="power-up-display">
-        <h3 style="margin: 0 0 10px 0">Power-ups</h3>
         <div class="power-up-stat">
-            <span class="power-up-icon" style="background: #00ff00"></span>
-            <span>Bullet Speed: <span id="speed-multiplier">1.0</span>x</span>
+            <span class="power-up-icon" style="background: #00ff00;"></span>
+            Speed: <span id="speed-multiplier">1.0</span>x
         </div>
         <div class="power-up-stat">
-            <span class="power-up-icon" style="background: #ff00ff"></span>
-            <span>Pierce Level: <span id="pierce-level">0</span></span>
+            <span class="power-up-icon" style="background: #ff00ff;"></span>
+            Pierce: <span id="pierce-level">0</span>
         </div>
         <div class="power-up-stat">
-            <span class="power-up-icon" style="background: #ffff00"></span>
-            <span>Damage Multiplier: <span id="damage-multiplier">1.0</span>x</span>
+            <span class="power-up-icon" style="background: #ffff00;"></span>
+            Damage: <span id="damage-multiplier">1.0</span>x
         </div>
     </div>
-    <div id="power-up-notification" class="power-up-notification"></div>
-    <script type="module" src="js/main.js"></script>
+    
+    <div id="power-up-notification"></div>
+    
+    <script type="module" src="./js/main.js"></script>
 </body>
 </html>

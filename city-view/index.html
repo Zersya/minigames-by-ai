@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D City Scene</title>
+    <link rel="stylesheet" href="../styles/loading.css">
     <style>
         body {
             margin: 0;
@@ -33,23 +34,30 @@
             color: white;
             font-family: Arial, sans-serif;
             display: flex;
-            align-items: center;
             gap: 10px;
+            align-items: center;
         }
     </style>
 </head>
 <body>
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading City View...</div>
+        <div class="loading-progress">
+            <div id="loading-progress-bar" class="loading-progress-bar"></div>
+        </div>
+    </div>
+
     <div id="info">
-        <h2>3D City Scene</h2>
-        <p>Controls: WASD to move, Mouse to look around</p>
-        <p>Arrow keys or Q/E to move camera up/down</p>
+        <p>Use WASD to move</p>
+        <p>Use mouse to look around</p>
+        <p>Press Q/E or Arrow Up/Down to adjust height</p>
     </div>
     <div id="time-controls">
-        <label for="time-slider">Time of Day:</label>
-        <input type="range" id="time-slider" min="0" max="24" value="12" step="0.1">
+        <input type="range" id="time-slider" min="0" max="24" value="12" step="0.5">
         <span id="time-display">12:00</span>
     </div>
     
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="./js/main.js"></script>
 </body>
 </html>

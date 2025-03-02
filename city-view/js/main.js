@@ -8,19 +8,42 @@ import { VehicleSystem } from './vehicleSystem.js';
 import { PedestrianSystem } from './pedestrianSystem.js';
 import { LightingSystem } from './lightingSystem.js';
 
+// Loading manager setup
+const loadingManager = new THREE.LoadingManager();
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingProgressBar = document.getElementById('loading-progress-bar');
+
+// Counter for tracking initialization steps
+let initStepsCompleted = 0;
+const totalInitSteps = 5; // Adjust based on your initialization steps
+
+function updateLoadingProgress() {
+    initStepsCompleted++;
+    const progress = (initStepsCompleted / totalInitSteps) * 100;
+    loadingProgressBar.style.width = `${progress}%`;
+    
+    if (initStepsCompleted >= totalInitSteps) {
+        setTimeout(() => {
+            loadingOverlay.classList.add('fade-out');
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+            }, 500);
+        }, 100);
+    }
+}
+
 // Scene setup
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({ 
-    antialias: false, // Disable antialiasing for performance
+    antialias: false,
     powerPreference: "high-performance" 
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowMap; // Use basic shadow map instead of soft shadows
-// Limit the number of shadow maps to reduce texture units
-renderer.shadowMap.autoUpdate = false; // Only update shadow maps when needed
+renderer.shadowMap.type = THREE.PCFShadowMap;
 document.body.appendChild(renderer.domElement);
+updateLoadingProgress(); // Step 1
 
 // Add pixel ratio limiter for high-DPI displays
 const pixelRatio = Math.min(window.devicePixelRatio, 2); // Cap at 2x
@@ -34,6 +57,7 @@ controls.lookVertical = true;
 controls.constrainVertical = true;
 controls.verticalMin = Math.PI / 4;
 controls.verticalMax = Math.PI / 2.1;
+updateLoadingProgress(); // Step 2
 
 // Initial camera position
 camera.position.set(0, 5, 20);
@@ -50,14 +74,17 @@ const cityParams = {
 
 // Initialize systems
 const lightingSystem = new LightingSystem(scene);
-// Make lighting system globally available for street elements
 window.lightingSystem = lightingSystem;
+updateLoadingProgress(); // Step 3
+
 const cityBuilder = new CityBuilder(scene, cityParams);
 const vehicleSystem = new VehicleSystem(scene, cityBuilder.getRoadNetwork());
 const pedestrianSystem = new PedestrianSystem(scene, cityBuilder.getSidewalks(), cityBuilder.getCrosswalks());
+updateLoadingProgress(); // Step 4
 
 // Build the city
 cityBuilder.buildCity();
+updateLoadingProgress(); // Step 5
 
 // Update shadow maps once after city is built
 renderer.shadowMap.needsUpdate = true;
@@ -161,5 +188,6 @@ function animate() {
     renderer.render(scene, camera);
 }
 
+// Start animation only after everything is loaded
 animate();
 

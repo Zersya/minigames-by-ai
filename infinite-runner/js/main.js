@@ -9,6 +9,41 @@ import { DamagePopup } from './damagePopup.js';
 
 class Game {
     constructor() {
+        // Loading manager setup
+        this.loadingManager = new THREE.LoadingManager();
+        this.loadingOverlay = document.getElementById('loading-overlay');
+        this.loadingProgressBar = document.getElementById('loading-progress-bar');
+        
+        // Counter for tracking initialization steps
+        this.initStepsCompleted = 0;
+        this.totalInitSteps = 8; // Adjust based on your initialization steps
+        
+        this.initGame();
+
+        // Add time tracking
+        this.startTime = Date.now();
+        this.timeDisplay = document.getElementById('time-display');
+        
+        // Start time update interval
+        setInterval(() => this.updatePlayTime(), 1000);
+    }
+
+    updateLoadingProgress() {
+        this.initStepsCompleted++;
+        const progress = (this.initStepsCompleted / this.totalInitSteps) * 100;
+        this.loadingProgressBar.style.width = `${progress}%`;
+        
+        if (this.initStepsCompleted >= this.totalInitSteps) {
+            setTimeout(() => {
+                this.loadingOverlay.classList.add('fade-out');
+                setTimeout(() => {
+                    this.loadingOverlay.style.display = 'none';
+                }, 500);
+            }, 100);
+        }
+    }
+
+    initGame() {
         // Scene setup
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -17,36 +52,37 @@ class Game {
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(this.renderer.domElement);
+        this.updateLoadingProgress(); // Step 1
 
         // Set initial background color
-        this.scene.background = new THREE.Color(0x87CEEB); // Sky blue
+        this.scene.background = new THREE.Color(0x87CEEB);
+        this.updateLoadingProgress(); // Step 2
 
         // Initialize lighting first
         this.lightingSystem = new LightingSystem(this.scene);
+        this.updateLoadingProgress(); // Step 3
 
         // Game systems
         this.platform = new Platform(this.scene);
+        this.updateLoadingProgress(); // Step 4
+
         this.player = new Player(this.scene);
+        this.updateLoadingProgress(); // Step 5
+
         this.enemySystem = new EnemySystem(this.scene);
         this.weaponSystem = new WeaponSystem(this.scene);
         this.powerUpSystem = new PowerUpSystem(this.scene);
         this.damagePopup = new DamagePopup(this.scene);
+        this.updateLoadingProgress(); // Step 6
+
+        // Configure systems
         this.weaponSystem.damagePopup = this.damagePopup;
-
-        // Configure enemy parameters with more reasonable initial values
-        this.enemySystem.setEnemyParameters({
-            maxEnemies: 20,
-            baseMovementSpeed: 5,
-            speedVariation: 1,
-            spawnInterval: 1.0
-        });
-
-        // Set the weapon system for the player
         this.player.setWeaponSystem(this.weaponSystem);
+        this.updateLoadingProgress(); // Step 7
 
-        // Game state
+        // Game state initialization
         this.score = 0;
-        this.gameSpeed = 0.5; // Start with a lower game speed
+        this.gameSpeed = 0.5;
         this.isGameOver = false;
 
         // Camera setup
@@ -56,17 +92,9 @@ class Game {
         // Event listeners
         window.addEventListener('resize', () => this.handleResize());
         window.addEventListener('keydown', (e) => this.handleInput(e));
+        this.updateLoadingProgress(); // Step 8
 
-        // Time controls
-        this.setupTimeControls();
-
-        // Set initial time of day
-        this.lightingSystem.updateTimeOfDay(12); // Start at noon
-
-        // Gradually increase game speed
-        this.setupDifficultyProgression();
-
-        // Start game loop
+        // Start animation
         this.animate();
     }
 
@@ -170,6 +198,17 @@ class Game {
             this.checkCollisions();
             this.renderer.render(this.scene, this.camera);
         }
+    }
+
+    updatePlayTime() {
+        if (this.isGameOver) return;
+        
+        const elapsedSeconds = Math.floor((Date.now() - this.startTime) / 1000);
+        const minutes = Math.floor(elapsedSeconds / 60);
+        const seconds = elapsedSeconds % 60;
+        
+        this.timeDisplay.textContent = 
+            `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 }
 
