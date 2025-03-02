@@ -5,6 +5,7 @@ import { EnemySystem } from './enemySystem.js';
 import { WeaponSystem } from './weaponSystem.js';
 import { LightingSystem } from './lightingSystem.js';
 import { PowerUpSystem } from './powerUpSystem.js';
+import { DamagePopup } from './damagePopup.js';
 
 class Game {
     constructor() {
@@ -29,6 +30,8 @@ class Game {
         this.enemySystem = new EnemySystem(this.scene);
         this.weaponSystem = new WeaponSystem(this.scene);
         this.powerUpSystem = new PowerUpSystem(this.scene);
+        this.damagePopup = new DamagePopup(this.scene);
+        this.weaponSystem.damagePopup = this.damagePopup;
 
         // Configure enemy parameters with more reasonable initial values
         this.enemySystem.setEnemyParameters({
@@ -109,6 +112,8 @@ class Game {
     updateScore(points) {
         this.score += points;
         document.getElementById('score-display').textContent = `Score: ${this.score}`;
+        // Update enemy system difficulty based on new score
+        this.enemySystem.updateDifficulty(this.score);
     }
 
     checkCollisions() {
@@ -155,6 +160,7 @@ class Game {
             this.enemySystem.update(delta, this.gameSpeed);
             this.weaponSystem.update(delta, this.platform);
             this.powerUpSystem.update(delta, this.weaponSystem);
+            this.damagePopup.update(delta);
             
             this.powerUpSystem.checkProjectileCollisions(
                 this.weaponSystem.projectiles,

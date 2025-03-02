@@ -32,6 +32,15 @@ export class WeaponSystem {
         // Add new power-up related properties
         this.piercingShots = 0; // Number of enemies a projectile can pierce through
         this.permanentMultiplier = 1; // Permanent damage multiplier
+
+        // Spread angle for multiplied projectiles (in radians)
+        this.spreadAngle = Math.PI / 95; // Adjust this value to control spread
+
+        // Add base damage range
+        this.baseDamageMin = 100;
+        this.baseDamageMax = 200;
+        this.criticalChance = 0.05; // 20% chance for critical hits
+        this.criticalMultiplier = 2.0; // Critical hits do double damage
     }
 
     shoot(playerPosition) {
@@ -42,17 +51,24 @@ export class WeaponSystem {
         this.lastFireTime = now;
     }
 
-    createProjectile(position) {
-        const projectile = new THREE.Mesh(this.projectileGeometry, this.projectileMaterial);
+    createProjectile(position, angle = 0) {
+        const projectile = new THREE.Mesh(this.projectileGeometry, this.projectileMaterial.clone());
         projectile.position.copy(position);
         projectile.position.y += 0.5;
         projectile.position.z += 2;
         
+        // Add direction vector for angled projectiles
         projectile.userData = {
-            multiplier: this.permanentMultiplier,
+            multiplier: 1,
             speedMultiplier: 1,
             remainingPierces: this.piercingShots,
-            boundingBox: new THREE.Box3()
+            direction: new THREE.Vector3(
+                Math.sin(angle),  // x component
+                0,               // y component
+                Math.cos(angle)  // z component
+            ),
+            boundingBox: new THREE.Box3(),
+            lastGateHit: null  // Track the last gate hit to prevent multiple hits
         };
         
         projectile.geometry.computeBoundingBox();
@@ -62,74 +78,79 @@ export class WeaponSystem {
         return projectile;
     }
 
+    multiplyProjectile(projectile, gate) {
+        // Don't multiply if we've already hit this gate
+        if (projectile.userData.lastGateHit === gate) {
+            return [];
+        }
+
+        const currentCount = 2; // Double the projectiles each time
+        const currentAngle = Math.atan2(projectile.userData.direction.x, projectile.userData.direction.z);
+        const angleStep = this.spreadAngle;
+        const baseAngle = currentAngle - (angleStep / 2);
+        
+        const newProjectiles = [];
+        
+        // Create new projectiles
+        for (let i = 0; i < currentCount; i++) {
+            const angle = baseAngle + (angleStep * i);
+            const newProjectile = this.createProjectile(projectile.position.clone(), angle);
+            
+            // Copy properties from original projectile
+            newProjectile.userData.multiplier = projectile.userData.multiplier;
+            newProjectile.userData.speedMultiplier = projectile.userData.speedMultiplier;
+            newProjectile.userData.remainingPierces = projectile.userData.remainingPierces;
+            newProjectile.userData.lastGateHit = gate;  // Mark this gate as hit
+            
+            newProjectiles.push(newProjectile);
+        }
+        
+        // Remove the original projectile
+        this.removeProjectile(projectile);
+        
+        return newProjectiles;
+    }
+
     checkGateCollisions(gates) {
         if (!gates || gates.length === 0) return;
 
         const projectileBounds = new THREE.Box3();
         const gateBounds = new THREE.Box3();
-        const projectilesToRemove = new Set();
-        const newProjectiles = [];
+        const projectilesToProcess = new Map(); // Map projectiles to their corresponding gates
 
-        // First pass: collect all collisions and plan new projectiles
+        // First pass: collect all projectiles and their corresponding gates
         for (const projectile of this.projectiles) {
-            if (projectilesToRemove.has(projectile)) continue;
+            if (!projectile.parent) continue;
             
             projectileBounds.setFromObject(projectile);
             
-            if (this.debug) {
-                this.projectileBounds.box.copy(projectileBounds);
-            }
-
             for (const gate of gates) {
+                if (!gate.parent) continue;
+
                 gateBounds.setFromObject(gate);
                 gateBounds.expandByScalar(0.5);
 
-                if (projectileBounds.intersectsBox(gateBounds)) {
-                    projectilesToRemove.add(projectile);
-                    
-                    // Calculate new projectiles
-                    const currentMultiplier = projectile.userData.multiplier || 1;
-                    const spreadFactor = 0.15 * currentMultiplier;
-                    
-                    // Create two new projectiles with wider spread
-                    const positions = [
-                        projectile.position.x - spreadFactor,
-                        projectile.position.x + spreadFactor
-                    ];
-
-                    for (const xPos of positions) {
-                        newProjectiles.push({
-                            position: new THREE.Vector3(xPos, projectile.position.y, projectile.position.z),
-                            multiplier: currentMultiplier * 2,
-                            speedMultiplier: projectile.userData.speedMultiplier || 1
-                        });
-                    }
+                if (projectileBounds.intersectsBox(gateBounds) && 
+                    projectile.userData.lastGateHit !== gate) {
+                    projectilesToProcess.set(projectile, gate);
                     break;
                 }
             }
         }
 
-        // Second pass: remove old projectiles and create new ones
-        for (const projectile of projectilesToRemove) {
-            this.scene.remove(projectile);
-            const index = this.projectiles.indexOf(projectile);
-            if (index > -1) {
-                this.projectiles.splice(index, 1);
+        // Second pass: multiply collected projectiles
+        for (const [projectile, gate] of projectilesToProcess.entries()) {
+            if (projectile.parent) { // Check if projectile still exists
+                this.multiplyProjectile(projectile, gate);
             }
         }
+    }
 
-        // Create all new projectiles
-        for (const newProjectile of newProjectiles) {
-            const projectile = new THREE.Mesh(this.projectileGeometry, this.projectileMaterial);
-            projectile.position.copy(newProjectile.position);
-            projectile.userData = {
-                multiplier: newProjectile.multiplier,
-                speedMultiplier: newProjectile.speedMultiplier,
-                boundingBox: new THREE.Box3()
-            };
-            
-            this.scene.add(projectile);
-            this.projectiles.push(projectile);
+    removeProjectile(projectile) {
+        const index = this.projectiles.indexOf(projectile);
+        if (index > -1) {
+            this.scene.remove(projectile);
+            this.projectiles.splice(index, 1);
         }
     }
 
@@ -143,20 +164,25 @@ export class WeaponSystem {
         // Update projectiles
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const projectile = this.projectiles[i];
+            
+            if (!projectile.parent) {
+                this.projectiles.splice(i, 1);
+                continue;
+            }
+
             const speedMultiplier = projectile.userData.speedMultiplier || 1;
             
-            // Update position - now moving straight forward
-            projectile.position.z += delta * this.projectileSpeed * speedMultiplier;
-
-            // Update bounding box
-            projectile.userData.boundingBox.setFromObject(projectile);
+            // Update position using direction vector
+            const movement = projectile.userData.direction.clone()
+                .multiplyScalar(delta * this.projectileSpeed * speedMultiplier);
+            
+            projectile.position.add(movement);
 
             // Remove projectiles that are too far
             if (projectile.position.z > 100 || 
                 projectile.position.z < -20 || 
                 Math.abs(projectile.position.x) > 20) {
-                this.scene.remove(projectile);
-                this.projectiles.splice(i, 1);
+                this.removeProjectile(projectile);
             }
         }
 
@@ -182,38 +208,84 @@ export class WeaponSystem {
         }
     }
 
+    calculateDamage() {
+        // Generate random base damage
+        const baseDamage = Math.floor(
+            Math.random() * (this.baseDamageMax - this.baseDamageMin + 1) + this.baseDamageMin
+        );
+
+        // Check for critical hit
+        const isCritical = Math.random() < this.criticalChance;
+        const criticalMult = isCritical ? this.criticalMultiplier : 1;
+
+        // Apply all multipliers
+        const totalDamage = baseDamage * this.permanentMultiplier * criticalMult;
+
+        return {
+            damage: Math.round(totalDamage),
+            isCritical
+        };
+    }
+
     checkCollisions(enemies, onHit) {
         const projectileBounds = new THREE.Box3();
         const enemyBounds = new THREE.Box3();
+        const projectilesToRemove = new Set();
 
+        // Process each projectile
         for (let i = this.projectiles.length - 1; i >= 0; i--) {
             const projectile = this.projectiles[i];
+            
+            if (!projectile.parent || projectilesToRemove.has(projectile)) continue;
+
             projectileBounds.setFromObject(projectile);
+            let hitDetected = false;
 
             for (const enemy of enemies) {
+                if (!enemy.parent) continue;
+                
                 enemyBounds.setFromObject(enemy);
+                
                 if (projectileBounds.intersectsBox(enemyBounds)) {
-                    // Calculate damage based on multiplier
-                    const baseDamage = 1;
-                    const totalDamage = baseDamage * projectile.userData.multiplier;
+                    // Calculate damage using the new damage system
+                    const damageResult = this.calculateDamage();
+                    const totalDamage = damageResult.damage;
                     
-                    // Apply damage and check if enemy is defeated
+                    // Create damage popup with different colors for critical hits
+                    if (this.damagePopup) {
+                        const position = enemy.position.clone();
+                        this.damagePopup.createDamageNumber(
+                            position, 
+                            totalDamage,
+                            damageResult.isCritical
+                        );
+                    }
+                    
                     const isDefeated = enemy.userData.enemySystem.damageEnemy(enemy, totalDamage);
                     
                     if (isDefeated) {
                         onHit(enemy);
                     }
                     
-                    // Handle piercing shots
+                    hitDetected = true;
+                    
                     if (projectile.userData.remainingPierces > 0) {
                         projectile.userData.remainingPierces--;
                     } else {
-                        this.scene.remove(projectile);
-                        this.projectiles.splice(i, 1);
+                        projectilesToRemove.add(projectile);
                         break;
                     }
                 }
             }
+            
+            if (hitDetected && !projectile.userData.remainingPierces) {
+                projectilesToRemove.add(projectile);
+            }
+        }
+
+        // Remove all marked projectiles
+        for (const projectile of projectilesToRemove) {
+            this.removeProjectile(projectile);
         }
     }
 

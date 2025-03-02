@@ -60,7 +60,7 @@ export class Player {
             }
         }
 
-        // Auto-shooting logic
+        // Auto-shooting logic - simplified and always shoots when enabled
         if (this.autoShootEnabled && this.weaponSystem) {
             const currentTime = performance.now();
             if (currentTime - this.lastShootTime >= this.shootInterval) {

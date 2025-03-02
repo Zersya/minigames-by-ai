@@ -13,12 +13,13 @@ export class Platform {
         this.gateHeight = 6;
         this.gateWidth = 3;
         this.gateThickness = 0.2;
-        this.fixedGateDistance = 5; // Distance in front of player
+        this.fixedGateDistance = 2; // Distance in front of player
+        this.gateStackSpacing = 8; // Increased spacing between stacked gates
         
         // Gate spawn control
         this.gateSpawnTimer = 0;
         this.gateSpawnInterval = 1.5; // Spawn new gate every 1.5 seconds
-        this.maxGatesPerLane = 3; // Maximum gates that can stack in one lane
+        this.maxGatesPerLane = 2; // Maximum gates that can stack in one lane
         this.gateLifespan = 5000; // Gate lives for 5 seconds
         
         // Create gate frame geometry
@@ -95,8 +96,8 @@ export class Platform {
         // Calculate z position based on existing gates in the lane
         let zOffset = this.fixedGateDistance;
         if (gatesInLane.length > 0) {
-            // Stack gates with small spacing between them
-            zOffset += gatesInLane.length * (this.gateThickness + 0.5);
+            // Stack gates with increased spacing between them
+            zOffset += gatesInLane.length * (this.gateThickness + this.gateStackSpacing);
         }
 
         const gate = this.gateGeometry.clone();
@@ -142,7 +143,7 @@ export class Platform {
                 // Adjust positions of remaining gates in the same lane
                 const sameLineGates = this.gates.filter(g => g.position.x === gate.userData.lane);
                 sameLineGates.forEach((g, index) => {
-                    g.position.z = this.fixedGateDistance + index * (this.gateThickness + 0.5);
+                    g.position.z = this.fixedGateDistance + index * (this.gateThickness + this.gateStackSpacing);
                     g.userData.multiplier = Math.pow(2, index + 1); // Update multipliers
                 });
             }
