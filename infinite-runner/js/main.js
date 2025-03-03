@@ -204,6 +204,7 @@ class Game {
             
             // Update game systems
             this.player.update(delta);
+            this.platform.updateSpeed(this.gameSpeed, this.score);
             this.platform.update(delta, this.gameSpeed);
             this.enemySystem.update(delta, this.gameSpeed);
             this.weaponSystem.update(delta, this.platform);

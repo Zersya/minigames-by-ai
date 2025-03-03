@@ -5,64 +5,73 @@ export class EnemySystem {
         this.scene = scene;
         this.enemies = [];
         this.spawnTimer = 0;
-        this.spawnInterval = 0.25;  // Reset to original value
+        this.spawnInterval = 0.25;
         this.lanes = [-4, 0, 4];
         this.currentScore = 0;
         
-        // Enemy spawn control
+        // Enemy spawn control - Adjusted to match fog
         this.maxEnemies = 50;
         this.minSpawnInterval = 0.5;
         this.maxSpawnInterval = 1.5;
         this.lastSpawnLane = null;
-        this.minSpawnDistance = 30;
-        this.maxSpawnDistance = 100;
+        this.minSpawnDistance = 90;  // Increased to spawn within fog
+        this.maxSpawnDistance = 120; // Increased to spawn within fog
 
-        // Enhanced difficulty scaling parameters
+        // Enhanced difficulty scaling parameters with adjusted spawn distances
         this.difficultyScaling = {
             EASY: { 
                 score: 0,
                 multiplier: 1,
                 maxEnemies: 15,
                 spawnInterval: 1.5,
-                minSpawnDistance: 30,
-                maxSpawnDistance: 100,
+                minSpawnDistance: 90,
+                maxSpawnDistance: 120,
                 baseSpeed: 5
             },
-            MEDIUM: { 
+            MEDIUM: {
                 score: 10000,
                 multiplier: 1.5,
-                maxEnemies: 35,
-                spawnInterval: 1.2,
-                minSpawnDistance: 25,
-                maxSpawnDistance: 90,
+                maxEnemies: 25,
+                spawnInterval: 1.0,
+                minSpawnDistance: 90,
+                maxSpawnDistance: 120,
                 baseSpeed: 15
             },
-            HARD: { 
-                score: 20000,
+            HARD: {
+                score: 25000,
                 multiplier: 2,
-                maxEnemies: 45,
-                spawnInterval: 1.0,
-                minSpawnDistance: 20,
-                maxSpawnDistance: 80,
+                maxEnemies: 40,
+                spawnInterval: 0.75,
+                minSpawnDistance: 90,
+                maxSpawnDistance: 120,
                 baseSpeed: 25
             },
-            EXPERT: { 
-                score: 50000,
+            EXPERT: {  // Added missing EXPERT level
+                score: 5000,
                 multiplier: 2.5,
-                maxEnemies: 50,
-                spawnInterval: 0.8,
-                minSpawnDistance: 15,
-                maxSpawnDistance: 70,
+                maxEnemies: 60,
+                spawnInterval: 0.6,
+                minSpawnDistance: 90,
+                maxSpawnDistance: 120,
                 baseSpeed: 35
             },
-            MASTER: { 
+            MASTER: {  // Added missing MASTER level
                 score: 100000,
                 multiplier: 3,
                 maxEnemies: 80,
                 spawnInterval: 0.5,
-                minSpawnDistance: 10,
-                maxSpawnDistance: 60,
+                minSpawnDistance: 90,
+                maxSpawnDistance: 120,
                 baseSpeed: 40
+            },
+            EXTREME: {
+                score: 150000,
+                multiplier: 3.5,
+                maxEnemies: 100,
+                spawnInterval: 0.4,
+                minSpawnDistance: 90,
+                maxSpawnDistance: 120,
+                baseSpeed: 45
             }
         };
 
@@ -73,35 +82,35 @@ export class EnemySystem {
         this.baseEnemyTypes = {
             WEAK: {
                 health: 200,
-                color: 0xff0000,
+                color: 0x41644A,
                 scale: 1,
                 probability: 0.4,
                 name: "Scout"
             },
             MEDIUM: {
                 health: 400,
-                color: 0xff6600,
+                color: 0x0D4715,
                 scale: 1.2,
                 probability: 0.3,
                 name: "Soldier"
             },
             STRONG: {
                 health: 800,
-                color: 0xff3300,
+                color: 0xE07A5F,
                 scale: 1.4,
                 probability: 0.15,
                 name: "Elite"
             },
             TANK: {
                 health: 1500,
-                color: 0x990000,
+                color: 0x690B22,
                 scale: 1.6,
                 probability: 0.1,
                 name: "Tank"
             },
             BOSS: {
                 health: 3000,
-                color: 0x660066,
+                color: 0x7D1C4A,
                 scale: 2.0,
                 probability: 0.05,
                 name: "Boss"
@@ -206,6 +215,9 @@ export class EnemySystem {
         // Update enemy types with new multiplier
         this.enemyTypes = this.getScaledEnemyTypes(score);
         
+        // Update difficulty progress display
+        this.updateDifficultyProgress(score);
+        
         // Smoothly interpolate between difficulty levels
         const progressToNextLevel = this.calculateProgressToNextLevel(score);
         
@@ -242,6 +254,45 @@ export class EnemySystem {
         );
 
         this.currentDifficultyLevel = newDifficulty;
+    }
+
+    updateDifficultyProgress(score) {
+        const difficulties = Object.entries(this.difficultyScaling);
+        const progressBar = document.getElementById('difficulty-progress-bar');
+        const currentDifficultyElement = document.getElementById('current-difficulty');
+        const nextDifficultyElement = document.getElementById('next-difficulty');
+        
+        // Find current and next difficulty levels
+        let currentIndex = 0;
+        for (let i = 0; i < difficulties.length; i++) {
+            if (score >= difficulties[i][1].score) {
+                currentIndex = i;
+            } else {
+                break;
+            }
+        }
+        
+        const currentDifficulty = difficulties[currentIndex];
+        const nextDifficulty = difficulties[currentIndex + 1];
+        
+        if (nextDifficulty) {
+            // Calculate progress percentage
+            const currentScore = score - currentDifficulty[1].score;
+            const scoreRange = nextDifficulty[1].score - currentDifficulty[1].score;
+            const progress = (currentScore / scoreRange) * 100;
+            
+            // Update progress bar
+            progressBar.style.width = `${Math.min(progress, 100)}%`;
+            
+            // Update difficulty labels
+            currentDifficultyElement.textContent = currentDifficulty[0];
+            nextDifficultyElement.textContent = nextDifficulty[0];
+        } else {
+            // Max difficulty reached
+            progressBar.style.width = '100%';
+            currentDifficultyElement.textContent = currentDifficulty[0];
+            nextDifficultyElement.textContent = 'MAX';
+        }
     }
 
     calculateProgressToNextLevel(score) {
@@ -313,9 +364,11 @@ export class EnemySystem {
         // Scale enemy based on type
         enemy.scale.set(enemyType.scale, enemyType.scale, enemyType.scale);
 
-        // Position enemy
+        // Position enemy - Spawn in fog area
         const lane = this.getRandomLane();
-        const distance = Math.random() * (this.maxSpawnDistance - this.minSpawnDistance) + this.minSpawnDistance;
+        const distance = Math.random() * 
+            (this.currentDifficultyLevel.maxSpawnDistance - this.currentDifficultyLevel.minSpawnDistance) + 
+            this.currentDifficultyLevel.minSpawnDistance;
         
         enemy.position.set(lane, 1, distance);
         

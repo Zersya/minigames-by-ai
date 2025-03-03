@@ -10,24 +10,19 @@ export class PowerUpSystem {
         this.ui = new PowerUpUI();
 
         this.powerUpTypes = {
-            // SPEED: {
-            //     color: 0x00ff00,
-            //     probability: 0.25,
-            //     effect: 'speed'
-            // },
             PIERCE: {
                 color: 0xff00ff,
-                probability: 0.25,
+                probability: 0.33,
                 effect: 'pierce'
             },
             MULTIPLIER: {
                 color: 0xffff00,
-                probability: 0.25,
+                probability: 0.33,
                 effect: 'multiplier'
             },
             FIRE_RATE: {
-                color: 0x00ffff, // Cyan color for fire rate
-                probability: 0.25,
+                color: 0x00ffff,
+                probability: 0.34,
                 effect: 'fireRate'
             }
         };
@@ -49,31 +44,34 @@ export class PowerUpSystem {
         const lanes = [-4, 0, 4];
         const randomLane = lanes[Math.floor(Math.random() * lanes.length)];
         
-        // Random power-up type based on probability
-        const random = Math.random();
-        let cumulative = 0;
-        let selectedType;
+        // Get array of power-up types
+        const powerUpEntries = Object.entries(this.powerUpTypes);
+        const totalProbability = powerUpEntries.reduce((sum, [_, data]) => sum + data.probability, 0);
         
-        for (const [type, data] of Object.entries(this.powerUpTypes)) {
-            cumulative += data.probability;
-            if (random <= cumulative) {
-                selectedType = { type, ...data };
+        // Random selection with probability
+        let random = Math.random() * totalProbability;
+        let selectedType = powerUpEntries[0]; // Default to first type
+        
+        for (const [type, data] of powerUpEntries) {
+            if (random <= data.probability) {
+                selectedType = [type, data];
                 break;
             }
+            random -= data.probability;
         }
 
-        const material = this.createPowerUpMaterial(selectedType.color);
+        const material = this.createPowerUpMaterial(selectedType[1].color);
         const powerUp = new THREE.Mesh(this.powerUpGeometry, material);
         
         powerUp.position.set(
             randomLane,
             1,
-            50 // Spawn ahead of player
+            50
         );
 
         powerUp.userData = {
-            type: selectedType.type,
-            effect: selectedType.effect
+            type: selectedType[0],
+            effect: selectedType[1].effect
         };
 
         this.scene.add(powerUp);

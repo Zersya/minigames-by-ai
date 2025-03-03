@@ -15,6 +15,9 @@
             font-family: Arial, sans-serif;
             font-size: 24px;
             z-index: 100;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
         }
         #time-controls {
             position: fixed;
@@ -76,7 +79,32 @@
         </div>
     </div>
 
-    <div id="score-display">Score: 0</div>
+    <div id="score-display" style="background: rgba(0, 0, 0, 0.5); padding: 10px; border-radius: 5px;">Score: 0</div>
+    <div id="difficulty-progress" style="
+        position: fixed;
+        top: 70px;
+        left: 20px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 10px;
+        border-radius: 5px;
+        color: white;
+        font-family: Arial, sans-serif;
+        z-index: 100;
+        min-width: 200px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+            <span id="current-difficulty">EASY</span>
+            <span id="next-difficulty">MEDIUM</span>
+        </div>
+        <div style="background: rgba(255, 255, 255, 0.2); height: 4px; border-radius: 2px;">
+            <div id="difficulty-progress-bar" style="
+                width: 0%;
+                height: 100%;
+                background: #ffffff;
+                border-radius: 2px;
+                transition: width 0.3s ease-out;">
+            </div>
+        </div>
+    </div>
     <div id="time-controls">
         Time: <span id="time-display">00:00</span>
     </div>
