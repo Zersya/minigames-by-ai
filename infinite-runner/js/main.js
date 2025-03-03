@@ -147,25 +147,45 @@ class Game {
     checkCollisions() {
         // Check player-enemy collisions
         const playerBounds = this.player.getBounds();
-        this.enemySystem.checkCollisions(playerBounds, (enemy) => {
-            this.isGameOver = true;
-            console.log('Game Over!');
-        });
-
-        // Check projectile-enemy collisions
-        this.weaponSystem.checkCollisions(this.enemySystem.getEnemies(), (enemy) => {
-            // Only remove enemy if it's defeated
-            if (enemy.userData.currentHealth <= 0) {
-                this.enemySystem.removeEnemy(enemy);
-                // Score based on enemy type
-                const baseScore = {
-                    'WEAK': 100,
-                    'MEDIUM': 300,
-                    'STRONG': 500
-                }[enemy.userData.type] || 100;
-                this.updateScore(baseScore);
+        const hasCollision = this.enemySystem.checkCollisions(playerBounds, (enemy) => {
+            if (!this.isGameOver) {
+                this.isGameOver = true;
+                this.handleGameOver();
             }
         });
+
+        // Only check other collisions if game is not over
+        if (!this.isGameOver) {
+            // Check projectile-enemy collisions
+            this.weaponSystem.checkCollisions(this.enemySystem.getEnemies(), (enemy) => {
+                // Only remove enemy if it's defeated
+                if (enemy.userData.currentHealth <= 0) {
+                    this.enemySystem.removeEnemy(enemy);
+                    // Score based on enemy type
+                    const baseScore = {
+                        'WEAK': 100,
+                        'MEDIUM': 300,
+                        'STRONG': 500
+                    }[enemy.userData.type] || 100;
+                    this.updateScore(baseScore);
+                }
+            });
+        }
+    }
+
+    handleGameOver() {
+        console.log('Game Over!');
+        // Add any additional game over logic here
+        // For example, show game over screen, stop animations, etc.
+        
+        // Stop the animation loop
+        cancelAnimationFrame(this.animationFrameId);
+        
+        // Optional: Show game over UI
+        const gameOverDisplay = document.getElementById('game-over-display');
+        if (gameOverDisplay) {
+            gameOverDisplay.style.display = 'block';
+        }
     }
 
     setupDifficultyProgression() {
@@ -178,7 +198,7 @@ class Game {
 
     animate() {
         if (!this.isGameOver) {
-            requestAnimationFrame(() => this.animate());
+            this.animationFrameId = requestAnimationFrame(() => this.animate());
 
             const delta = Math.min(0.016, 1/60); // Cap delta time
             

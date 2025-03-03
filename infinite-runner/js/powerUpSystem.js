@@ -10,20 +10,25 @@ export class PowerUpSystem {
         this.ui = new PowerUpUI();
 
         this.powerUpTypes = {
-            SPEED: {
-                color: 0x00ff00,
-                probability: 0.33,
-                effect: 'speed'
-            },
+            // SPEED: {
+            //     color: 0x00ff00,
+            //     probability: 0.25,
+            //     effect: 'speed'
+            // },
             PIERCE: {
                 color: 0xff00ff,
-                probability: 0.33,
+                probability: 0.25,
                 effect: 'pierce'
             },
             MULTIPLIER: {
                 color: 0xffff00,
-                probability: 0.34,
+                probability: 0.25,
                 effect: 'multiplier'
+            },
+            FIRE_RATE: {
+                color: 0x00ffff, // Cyan color for fire rate
+                probability: 0.25,
+                effect: 'fireRate'
             }
         };
 
@@ -101,22 +106,90 @@ export class PowerUpSystem {
     checkProjectileCollisions(projectiles, weaponSystem) {
         const powerUpBounds = new THREE.Box3();
         const projectileBounds = new THREE.Box3();
+        const powerUpsToRemove = new Set();
+        const collisionExpansion = 1.5; // Increase collision box size
 
         for (let i = this.powerUps.length - 1; i >= 0; i--) {
             const powerUp = this.powerUps[i];
+            if (!powerUp.parent) continue;
+            
+            // Set and expand the power-up bounds
             powerUpBounds.setFromObject(powerUp);
+            const size = new THREE.Vector3();
+            powerUpBounds.getSize(size);
+            powerUpBounds.expandByVector(size.multiplyScalar(collisionExpansion));
 
             for (const projectile of projectiles) {
+                if (!projectile.parent || powerUpsToRemove.has(powerUp)) continue;
+
                 projectileBounds.setFromObject(projectile);
                 
                 if (powerUpBounds.intersectsBox(projectileBounds)) {
+                    // Apply power-up effect
                     this.applyPowerUp(powerUp.userData.effect, weaponSystem);
-                    this.scene.remove(powerUp);
-                    this.powerUps.splice(i, 1);
+                    
+                    // Mark power-up for removal
+                    powerUpsToRemove.add(powerUp);
+
+                    // Handle multiplication for both original and duplicated projectiles
+                    if (projectile.userData.lastGateHit) {
+                        this.multiplyProjectileAfterPowerUp(projectile, weaponSystem);
+                    }
                     break;
                 }
             }
         }
+
+        // Remove collected power-ups
+        for (const powerUp of powerUpsToRemove) {
+            const index = this.powerUps.indexOf(powerUp);
+            if (index > -1) {
+                this.scene.remove(powerUp);
+                this.powerUps.splice(index, 1);
+            }
+        }
+    }
+
+    multiplyProjectileAfterPowerUp(projectile, weaponSystem) {
+        const currentAngle = Math.atan2(
+            projectile.userData.direction.x,
+            projectile.userData.direction.z
+        );
+        
+        // Get the gate multiplier from the projectile
+        const gateMultiplier = projectile.userData.lastGateHit.userData.multiplier || 2;
+        
+        // Create new projectiles based on the gate multiplier
+        const spreadAngle = Math.PI / 95;
+        const numProjectiles = gateMultiplier;
+        const baseAngle = currentAngle - (spreadAngle * (numProjectiles - 1) / 2);
+
+        for (let j = 0; j < numProjectiles; j++) {
+            const newAngle = baseAngle + (spreadAngle * j);
+            const direction = new THREE.Vector3(
+                Math.sin(newAngle),
+                0,
+                Math.cos(newAngle)
+            );
+
+            // Create new projectile with the same properties
+            const newProjectile = projectile.clone();
+            newProjectile.position.copy(projectile.position);
+            
+            // Preserve all important properties
+            newProjectile.userData = {
+                ...projectile.userData,
+                direction: direction,
+                isDuplicated: true,
+                lastGateHit: null // Reset gate hit to allow new multiplications
+            };
+
+            weaponSystem.scene.add(newProjectile);
+            weaponSystem.projectiles.push(newProjectile);
+        }
+
+        // Remove the original projectile
+        weaponSystem.removeProjectile(projectile);
     }
 
     applyPowerUp(effect, weaponSystem) {
@@ -129,6 +202,10 @@ export class PowerUpSystem {
                 break;
             case 'multiplier':
                 weaponSystem.permanentMultiplier *= 1.5;
+                break;
+            case 'fireRate':
+                weaponSystem.fireRate *= 1.2; // Increase fire rate by 20%
+                weaponSystem.fireRate = Math.min(weaponSystem.fireRate, 10); // Cap at 10 shots per second
                 break;
         }
         

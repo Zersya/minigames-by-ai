@@ -52,9 +52,8 @@
         }
         #power-up-notification {
             position: fixed;
-            left: 50%;
-            bottom: 100px;
-            transform: translateX(-50%);
+            right: 20px;
+            bottom: 20px;
             background: rgba(0, 0, 0, 0.7);
             color: white;
             padding: 10px 20px;
@@ -63,6 +62,8 @@
             opacity: 0;
             transition: opacity 0.3s;
             z-index: 100;
+            min-width: 200px;
+            text-align: right;
         }
     </style>
 </head>
@@ -81,10 +82,10 @@
     </div>
     
     <div id="power-up-display">
-        <div class="power-up-stat">
+        <!-- <div class="power-up-stat">
             <span class="power-up-icon" style="background: #00ff00;"></span>
             Speed: <span id="speed-multiplier">1.0</span>x
-        </div>
+        </div> -->
         <div class="power-up-stat">
             <span class="power-up-icon" style="background: #ff00ff;"></span>
             Pierce: <span id="pierce-level">0</span>
@@ -92,6 +93,10 @@
         <div class="power-up-stat">
             <span class="power-up-icon" style="background: #ffff00;"></span>
             Damage: <span id="damage-multiplier">1.0</span>x
+        </div>
+        <div class="power-up-stat">
+            <span class="power-up-icon" style="background: #00ffff;"></span>
+            Fire Rate: <span id="fire-rate">2.0</span>/s
         </div>
     </div>
     

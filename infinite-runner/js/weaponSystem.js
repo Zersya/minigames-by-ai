@@ -34,7 +34,7 @@ export class WeaponSystem {
         this.permanentMultiplier = 1; // Permanent damage multiplier
 
         // Spread angle for multiplied projectiles (in radians)
-        this.spreadAngle = Math.PI / 95; // Adjust this value to control spread
+        this.spreadAngle = Math.PI / 60; // Adjust this value to control spread
 
         // Add base damage range
         this.baseDamageMin = 100;
@@ -57,18 +57,18 @@ export class WeaponSystem {
         projectile.position.y += 0.5;
         projectile.position.z += 2;
         
-        // Add direction vector for angled projectiles
         projectile.userData = {
             multiplier: 1,
             speedMultiplier: 1,
             remainingPierces: this.piercingShots,
             direction: new THREE.Vector3(
-                Math.sin(angle),  // x component
-                0,               // y component
-                Math.cos(angle)  // z component
+                Math.sin(angle),
+                0,
+                Math.cos(angle)
             ),
             boundingBox: new THREE.Box3(),
-            lastGateHit: null  // Track the last gate hit to prevent multiple hits
+            lastGateHit: null,
+            isDuplicated: false // Add this flag for new projectiles
         };
         
         projectile.geometry.computeBoundingBox();
@@ -96,11 +96,20 @@ export class WeaponSystem {
             const angle = baseAngle + (angleStep * i);
             const newProjectile = this.createProjectile(projectile.position.clone(), angle);
             
-            // Copy properties from original projectile
-            newProjectile.userData.multiplier = projectile.userData.multiplier;
-            newProjectile.userData.speedMultiplier = projectile.userData.speedMultiplier;
-            newProjectile.userData.remainingPierces = projectile.userData.remainingPierces;
-            newProjectile.userData.lastGateHit = gate;  // Mark this gate as hit
+            // Copy ALL properties from original projectile
+            newProjectile.userData = {
+                ...projectile.userData,
+                multiplier: projectile.userData.multiplier,
+                speedMultiplier: projectile.userData.speedMultiplier,
+                remainingPierces: projectile.userData.remainingPierces,
+                direction: new THREE.Vector3(
+                    Math.sin(angle),
+                    0,
+                    Math.cos(angle)
+                ),
+                isDuplicated: true, // Mark as duplicated projectile
+                lastGateHit: gate  // Mark this gate as hit
+            };
             
             newProjectiles.push(newProjectile);
         }
